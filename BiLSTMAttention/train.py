@@ -21,7 +21,7 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 # Data loading params
-tf.flags.DEFINE_float("dev_sample_percentage",  0.1,          "Percentage of the training data to use for validation")
+tf.flags.DEFINE_float("dev_sample_percentage",  0.8,          "Percentage of the training data to use for validation")
 tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv.wordbreak", "Data source for the train data.")
 tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv.wordbreak", "Data source for the label data.")
 tf.flags.DEFINE_string("toy_query_file",        "../data/2017-07-27-22-01_Query.tsv.toy.wordbreak", "Toy Data source for the train data.")
@@ -38,9 +38,9 @@ flags.DEFINE_bool('non_static',             True,       "Whether change word2vec
 flags.DEFINE_bool('GRU',                    True,       "Whether use GRU")
 
 # Training parameters
-flags.DEFINE_integer("batch_size",          16,        "Batch Size (default: 64)")
+flags.DEFINE_integer("batch_size",          256,        "Batch Size (default: 64)")
 flags.DEFINE_integer("num_epochs",          1,          "Number of training epochs (default: 200)")
-flags.DEFINE_integer("evaluate_every",      100000,     "Evaluate model after X steps (default: 100)")
+flags.DEFINE_integer("evaluate_every",      10000000,   "Evaluate model after X steps (default: 100)")
 flags.DEFINE_integer("checkpoint_every",    5000,       "Save model after X steps (default: 100)")
 flags.DEFINE_integer("num_checkpoints",     5,          "Number of checkpoints to store (default: 5)")
 
@@ -65,7 +65,7 @@ logger.info("")
 # Load data
 logger.info("Loading data...")
 train_size, train_query, train_question = data_helpers.load_data(
-    FLAGS.toy_query_file, FLAGS.toy_question_file)
+    FLAGS.query_file, FLAGS.question_file)
 
 # Build vocabulary
 max_query_length = max([len(x.split()) for x in train_query])
@@ -162,7 +162,7 @@ with tf.Graph().as_default():
         sess.run(tf.global_variables_initializer())
         ckpt = tf.train.get_checkpoint_state(os.path.join(FLAGS.checkpoint, 'checkpoints'))
         if ckpt and gfile.Exists(ckpt.model_checkpoint_path):
-            print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
+            logger.info("Reading model parameters from {}".format(ckpt.model_checkpoint_path))
             saver.restore(sess, ckpt.model_checkpoint_path)
         
         def real_len(batches):
