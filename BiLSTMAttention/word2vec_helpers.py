@@ -91,9 +91,13 @@ class Word2VecHelper(object):
         #             indexed_sentences[count][index] = (self.word2index[word])
         #         else:
         #             indexed_sentences[count][index] = 0
-        indexed_sentences = np.array(
-            [[self.word2index[word] for word in sentence.split() if word in self.word2index ] for sentence in sentences]
-            )
+        indexed_sentences_list = []
+        for i in range(len(sentences)):
+            indexed_sentences_list.append([self.word2index[word] for word in sentences[i].split() if word in self.word2index])
+            if (i % 100000 == 0):
+                logger.info("")
+
+        indexed_sentences = np.array(indexed_sentences_list)
         logger.info("{} Sentences have been indexed".format(len(indexed_sentences)))
         indexed_sentences = np.array([x[:max_document_length - 1] + [0] * max(max_document_length - len(x), 1) for x in indexed_sentences])
         return indexed_sentences

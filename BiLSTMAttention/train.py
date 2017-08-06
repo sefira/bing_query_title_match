@@ -22,8 +22,8 @@ FLAGS = flags.FLAGS
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage",  0.8,          "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv.wordbreak", "Data source for the train data.")
-tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv.wordbreak", "Data source for the label data.")
+tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv1500000", "Data source for the train data.")
+tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv1500000", "Data source for the label data.")
 tf.flags.DEFINE_string("toy_query_file",        "../data/2017-07-27-22-01_Query.tsv.toy.wordbreak", "Toy Data source for the train data.")
 tf.flags.DEFINE_string("toy_question_file",     "../data/2017-07-27-22-01_Question.tsv.toy.wordbreak", "Toy Data source for the label data.")
 
@@ -63,14 +63,17 @@ logger.info("")
 # ==================================================
 
 # Load data
-logger.info("Loading data...")
+logger.info("Loading data from {} and {}".format(FLAGS.query_file, FLAGS.question_file))
 train_size, train_query, train_question = data_helpers.load_data(
     FLAGS.query_file, FLAGS.question_file)
 
 # Build vocabulary
 max_query_length = max([len(x.split()) for x in train_query])
+logger.info("Max query length: {}".format(max_query_length))
 max_question_length = max([len(x.split()) for x in train_question])
-max_document_length = max(max_query_length, max_question_length)
+logger.info("Max question length: {}".format(max_question_length))
+# max_document_length = max(max_query_length, max_question_length)
+max_document_length = 50
 word2vec_helpers = Word2VecHelper()
 x = word2vec_helpers.SentencesIndex(train_query, max_document_length)
 y = word2vec_helpers.SentencesIndex(train_question, max_document_length)
@@ -79,9 +82,12 @@ y = word2vec_helpers.SentencesIndex(train_question, max_document_length)
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(x)))
 query = x[shuffle_indices]
+logger.info("shuffled query data")
 question_pos = y[shuffle_indices]
+logger.info("shuffled question_pos data")
 shuffle_indices = np.random.permutation(np.arange(len(x)))
 question_neg = y[shuffle_indices]
+logger.info("shuffled question_neg data")
 
 # Split train/test set
 # TODO: This is very crude, should use cross-validation

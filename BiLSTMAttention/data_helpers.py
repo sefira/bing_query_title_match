@@ -32,12 +32,6 @@ def clean_str(string):
     string = re.sub(r"\s{2,}", " ", string)
     return string.strip().lower()
 
-class Sample():
-    def __init__(self, train_data, raw_data, label):
-        self.train_data = train_data
-        self.raw_data = raw_data
-        self.label = label
-
 def read_query_and_question(query_file, question_file):
     """
     Loads data from files, splits the data into words and generates labels.
@@ -52,7 +46,7 @@ def read_query_and_question(query_file, question_file):
     question_data = [s.strip() for s in question_data]
     
     train_number = len(query_data)
-    logger.info("Read {} lines data".format(train_number))
+    logger.info("Read {} lines query data, and {} question data".format(len(query_data), len(question_data)))
 
     if (len(query_data) != len(question_data)):
         logger.info("Can't read data, query data is inconsistent with question data")
@@ -80,7 +74,7 @@ def load_data(train_data_file, raw_data_file):
     random_state = check_random_state(12)
     check_index = random_state.randint(low=0, high=N-1,size=10)
     for i in check_index:
-        logger.info("Print Query and Question for checking:{}, {}".format(querys[i], questions[i]))
+        logger.info("Print Query and Question for checking:{} <vs> {}".format(querys[i], questions[i]))
 
     return [N, querys, questions]
 
