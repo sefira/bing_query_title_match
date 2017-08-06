@@ -95,7 +95,7 @@ class Word2VecHelper(object):
         for i in range(len(sentences)):
             indexed_sentences_list.append([self.word2index[word] for word in sentences[i].split() if word in self.word2index])
             if (i % 100000 == 0):
-                logger.info("")
+                logger.info("SentencesIndex " + str(i))
 
         indexed_sentences = np.array(indexed_sentences_list)
         logger.info("{} Sentences have been indexed".format(len(indexed_sentences)))

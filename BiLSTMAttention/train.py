@@ -22,8 +22,8 @@ FLAGS = flags.FLAGS
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage",  0.8,          "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv1500000", "Data source for the train data.")
-tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv1500000", "Data source for the label data.")
+tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv3000000", "Data source for the train data.")
+tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv3000000", "Data source for the label data.")
 tf.flags.DEFINE_string("toy_query_file",        "../data/2017-07-27-22-01_Query.tsv.toy.wordbreak", "Toy Data source for the train data.")
 tf.flags.DEFINE_string("toy_question_file",     "../data/2017-07-27-22-01_Question.tsv.toy.wordbreak", "Toy Data source for the label data.")
 
