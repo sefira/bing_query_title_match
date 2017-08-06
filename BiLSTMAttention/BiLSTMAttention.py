@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-class TextRNN(object):
+class BiLSTMAttention(object):
     """
     A RNN for text classification.
     Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.

@@ -7,8 +7,8 @@ from gensim.models import Word2Vec
 from sklearn.utils import check_random_state
 
 #################### config ###################
-modelfile = "../wvmodel/size300window5sg1min_count100negative10iter50.model"
-questionfile = "../wvmodel/questions-words-Zh.txt"
+modelfile = "../word2vec/model/size300window5sg1min_count100negative10iter25.model"
+questionfile = "../word2vec/data/questions-words-Zh.txt"
 ############### end of config #################
 
 logger = logging.getLogger()

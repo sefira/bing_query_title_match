@@ -8,7 +8,7 @@ import datetime
 import logging
 import data_helpers
 from word2vec_helpers import Word2VecHelper
-from text_rnn import TextRNN
+from BiLSTMAttention import BiLSTMAttention
 from tensorflow.contrib import learn
 from tensorflow.python.platform import gfile
 
@@ -22,25 +22,25 @@ FLAGS = flags.FLAGS
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage",  0.1,          "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("train_data_file",       "../data/zhidao_dataneg.tsv.removeword", "Data source for the train data.")
-tf.flags.DEFINE_string("raw_data_file",         "../data/zhidao_dataneg.tsv", "Data source for the label data.")
-tf.flags.DEFINE_string("toy_train_data_file",   "../data/toy_data.tsv.removeword", "Toy Data source for the train data.")
-tf.flags.DEFINE_string("toy_raw_data_file",     "../data/toy_data.tsv", "Toy Data source for the label data.")
+tf.flags.DEFINE_string("query_file",            "../data/2017-07-27-22-01_Query.tsv.wordbreak", "Data source for the train data.")
+tf.flags.DEFINE_string("question_file",         "../data/2017-07-27-22-01_Question.tsv.wordbreak", "Data source for the label data.")
+tf.flags.DEFINE_string("toy_query_file",        "../data/2017-07-27-22-01_Query.tsv.toy.wordbreak", "Toy Data source for the train data.")
+tf.flags.DEFINE_string("toy_question_file",     "../data/2017-07-27-22-01_Question.tsv.toy.wordbreak", "Toy Data source for the label data.")
 
 # Model Hyperparameters
-flags.DEFINE_float('lr',                    1e-2,       'The learning reate')
-flags.DEFINE_integer("embedding_dim",       300,        'Dimensionality of character embedding (default: 128)')
-flags.DEFINE_integer('hidden_layer_size',   300 ,       'LSTM hidden layer size')
-flags.DEFINE_integer('attention_size',      600 ,       'Attention model size, double hidden size due to Bidirect')
-flags.DEFINE_float('dropout_keep_prob',     0.5,        'Dropout rate')
-flags.DEFINE_float('l2_reg_lambda',         0.0,        'l2 reg lambda')
-flags.DEFINE_bool('non_static',             True,       'Whether change word2vec')
-flags.DEFINE_bool('GRU',                    False,       'Whether use GRU')
+flags.DEFINE_float('lr',                    1e-2,       "The learning reate")
+flags.DEFINE_integer("embedding_dim",       300,        "Dimensionality of character embedding (default: 128)")
+flags.DEFINE_integer('hidden_layer_size',   300 ,       "LSTM hidden layer size")
+flags.DEFINE_integer('attention_size',      600 ,       "Attention model size, double hidden size due to Bidirect")
+flags.DEFINE_float('dropout_keep_prob',     0.5,        "Dropout rate")
+flags.DEFINE_float('l2_reg_lambda',         0.0,        "l2 reg lambda")
+flags.DEFINE_bool('non_static',             True,       "Whether change word2vec")
+flags.DEFINE_bool('GRU',                    True,       "Whether use GRU")
 
 # Training parameters
-flags.DEFINE_integer("batch_size",          128,         "Batch Size (default: 64)")
+flags.DEFINE_integer("batch_size",          16,        "Batch Size (default: 64)")
 flags.DEFINE_integer("num_epochs",          1,          "Number of training epochs (default: 200)")
-flags.DEFINE_integer("evaluate_every",      1000,       "Evaluate model after X steps (default: 100)")
+flags.DEFINE_integer("evaluate_every",      100000,     "Evaluate model after X steps (default: 100)")
 flags.DEFINE_integer("checkpoint_every",    5000,       "Save model after X steps (default: 100)")
 flags.DEFINE_integer("num_checkpoints",     5,          "Number of checkpoints to store (default: 5)")
 
@@ -64,29 +64,33 @@ logger.info("")
 
 # Load data
 logger.info("Loading data...")
-train_size, train_data, train_label = data_helpers.load_data(
-    FLAGS.train_data_file, FLAGS.raw_data_file)
-x_text = train_data
-y = np.array(train_label)
+train_size, train_query, train_question = data_helpers.load_data(
+    FLAGS.toy_query_file, FLAGS.toy_question_file)
 
 # Build vocabulary
-max_document_length = max([len(x.split()) for x in train_data])
+max_query_length = max([len(x.split()) for x in train_query])
+max_question_length = max([len(x.split()) for x in train_question])
+max_document_length = max(max_query_length, max_question_length)
 word2vec_helpers = Word2VecHelper()
-x = word2vec_helpers.SentencesIndex(x_text, max_document_length)
+x = word2vec_helpers.SentencesIndex(train_query, max_document_length)
+y = word2vec_helpers.SentencesIndex(train_question, max_document_length)
 
 # Randomly shuffle data
 np.random.seed(10)
-shuffle_indices = np.random.permutation(np.arange(len(y)))
-x_shuffled = x[shuffle_indices]
-y_shuffled = y[shuffle_indices]
+shuffle_indices = np.random.permutation(np.arange(len(x)))
+query = x[shuffle_indices]
+question_pos = y[shuffle_indices]
+shuffle_indices = np.random.permutation(np.arange(len(x)))
+question_neg = y[shuffle_indices]
 
 # Split train/test set
 # TODO: This is very crude, should use cross-validation
-dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-x_train, x_dev = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-y_train, y_dev = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(query)))
+x_train, x_dev = query[:dev_sample_index], query[dev_sample_index:]
+pos_train, pos_dev = question_pos[:dev_sample_index], question_pos[dev_sample_index:]
+neg_train, neg_dev = question_neg[:dev_sample_index], question_neg[dev_sample_index:]
 logger.info("Vocabulary Size: {:d}".format(word2vec_helpers.vocab_size))
-logger.info("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
+logger.info("Train/Dev split: {:d}/{:d}".format(len(x_train), len(x_dev)))
 
 # Training
 # ==================================================
@@ -97,7 +101,7 @@ with tf.Graph().as_default():
     session_conf.gpu_options.allow_growth = True
     sess = tf.Session(config=session_conf)
     with sess.as_default():
-        rnn = TextRNN(
+        rnn = BiLSTMAttention(
             embedding_mat=word2vec_helpers.wordvector.astype(np.float32),
             non_static=FLAGS.non_static,
             GRU=FLAGS.GRU,
@@ -164,16 +168,19 @@ with tf.Graph().as_default():
         def real_len(batches):
             return [np.argmin(batch + [0]) for batch in batches]
         
-        def train_step(x_batch, y_batch):
+        def train_step(x_batch, pos_batch, neg_batch):
             """
             A single training step
             """
             feed_dict = {
               rnn.input_x: x_batch,
-              rnn.input_y: y_batch,
+              rnn.input_xpos: pos_batch,
+              rnn.input_xneg: neg_batch,
+              rnn.real_len_x: real_len(x_batch),
+              rnn.real_len_xpos: real_len(pos_batch),
+              rnn.real_len_xneg: real_len(neg_batch),
               rnn.dropout_keep_prob: FLAGS.dropout_keep_prob,
               rnn.batch_size: len(x_batch),
-              rnn.real_len: real_len(x_batch)
             }
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, rnn.loss, rnn.accuracy],
@@ -182,23 +189,26 @@ with tf.Graph().as_default():
             logger.info("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
             train_summary_writer.add_summary(summaries, step)
 
-        def dev_step(x_dev, y_dev):
+        def dev_step(x_dev, pos_dev, neg_dev):
             """
             Evaluates model on a dev set
             """
             batches = data_helpers.batch_iter(
-                list(zip(x_dev, y_dev)), FLAGS.batch_size, 1)
+                list(zip(x_dev, pos_dev, neg_dev)), FLAGS.batch_size, 1)
             loss_sum = 0
             accuracy_sum = 0
             count = 0
             for batch in batches:
-                x_batch, y_batch = zip(*batch)
+                x_batch, pos_batch, neg_batch = zip(*batch)
                 feed_dict = {
                   rnn.input_x: x_batch,
-                  rnn.input_y: y_batch,
+                  rnn.input_xpos: pos_batch,
+                  rnn.input_xneg: neg_batch,
+                  rnn.real_len_x: real_len(x_batch),
+                  rnn.real_len_xpos: real_len(pos_batch),
+                  rnn.real_len_xneg: real_len(neg_batch),
                   rnn.dropout_keep_prob: 1.0,
                   rnn.batch_size: len(x_batch),
-                  rnn.real_len: real_len(x_batch)
                 }
                 step, summaries, loss, accuracy = sess.run(
                     [global_step, dev_summary_op, rnn.loss, rnn.accuracy],
@@ -214,19 +224,19 @@ with tf.Graph().as_default():
 
         # Generate batches
         batches = data_helpers.batch_iter(
-            list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
+            list(zip(x_train, pos_train, neg_train)), FLAGS.batch_size, FLAGS.num_epochs)
         logger.info("With {} batch size, and {} train samples".format(FLAGS.batch_size, len(x_train)))
         logger.info("We get {} batches per epoch".format(len(x_train)/FLAGS.batch_size))
 
         # Training loop. For each batch...
         for batch in batches:
-            x_batch, y_batch = zip(*batch)
-            train_step(x_batch, y_batch)
+            x_batch, pos_batch, neg_batch = zip(*batch)
+            train_step(x_batch, pos_batch, neg_batch)
             current_step = tf.train.global_step(sess, global_step)
 
             if current_step % FLAGS.evaluate_every == 0:
                 logger.info("\nEvaluation:")
-                dev_step(x_dev, y_dev)
+                dev_step(x_dev, pos_dev, neg_dev)
                 logger.info("")
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)

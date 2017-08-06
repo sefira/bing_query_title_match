@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import logging
 import os.path
 import sys
@@ -8,14 +6,55 @@ import re
 
 #################### config ###################
 path = "../data/"
-data = "zhidao_dataneg.tsv"
+data = "2017-07-27-22-01_QueryQuestions.tsv.toy"
+query_data = "2017-07-27-22-01_Query.tsv.toy"
+question_data = "2017-07-27-22-01_Question.tsv.toy"
+# data = "2017-07-27-22-01_QueryQuestions.tsv"
+# query_data = "2017-07-27-22-01_Query.tsv"
+# question_data = "2017-07-27-22-01_Question.tsv"
 ############### end of config #################
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
 logging.root.setLevel(level=logging.INFO)
 logger = logging.getLogger()
 
-def Tradition2Simple():
+def CreateToyData():
+    inputfile = path + data
+    outputfile = inputfile + ".toy"
+    
+    input = open(inputfile, 'r')
+    output = open(outputfile, 'w')
+
+    i = 0
+    for line in input.readlines():
+        output.write(line)
+        i = i + 1
+        if (i == 100):
+            break
+
+def SplitQueryQuestion():
+    logger.info("running Split Query and Question " + path + data)
+    inputfile = path + data
+    queryfile = path + query_data
+    questionfile = path + question_data
+    i = 0
+    output_query = open(queryfile, 'w')
+    output_question = open(questionfile, 'w')
+    input = open(inputfile, 'r')
+
+    for line in input.readlines():
+        query, question = line.split('\t')
+        output_query.write(query + '\n')
+        output_question.write(question)
+        i = i + 1
+        if (i % 100000 == 0):
+            logger.info("Split " + str(i) + " articles")
+
+    output_query.close()
+    output_question.close()
+    logger.info("Finished Saved " + str(i) + " articles in" + queryfile + " and " + questionfile) 
+
+def Tradition2Simple(data):
     logger.info("running Tradition to Simple in " + path + data)
 
     inputfile = path + data
@@ -23,7 +62,7 @@ def Tradition2Simple():
     cmd = "opencc -i " + inputfile + " -o " + outputfile + " -c zht2zhs.ini"
     os.system(cmd)
 
-def WordBeark():
+def WordBeark(data):
     logger.info("running Word Beark in " + path + data)
 
     inputfile = path + data + ".zhs"
@@ -43,41 +82,9 @@ def WordBeark():
     output.close()
     logger.info("Finished Saved " + str(i) + " articles in " + outputfile)
 
-def RemoveWord():
-    logger.info("running Remove Word in " + path + data)
-
-    inputfile = path + data + ".wordbreak"
-    outputfile = path + data + ".removeword"
-    i = 0
-    output = open(outputfile, 'w')
-    input = open(inputfile, 'r')
-
-    for line in input.readlines():
-        if(len(line) < 2):
-            continue
-        ss = re.findall('[\n\s*\r\u4e00-\u9fa5]|nmovie|nrcelebrity', line)
-        output.write("".join(ss).strip() + '\n')
-
-        i = i + 1
-        if (i % 10000 == 0):
-            logger.info("remove words " + str(i) + " articles")
-
-    output.close()
-    logger.info("Finished Saved " + str(i) + " articles in " + outputfile)
-
-def CountMaxLength():
-    inputfile = path + data + ".removeword"
-    input = open(inputfile, "r")
-    length = 0
-    for line in input.readlines():
-        #line = line.decode("utf-8")
-        line = line.split()
-        length=max(len(line),length)
-    return length
-
-Tradition2Simple()
-WordBeark()
-RemoveWord()
-
-length = CountMaxLength()
-print("Max length of these sentense is " + str(length))
+#CreateToyData()
+SplitQueryQuestion()
+Tradition2Simple(query_data)
+Tradition2Simple(question_data)
+WordBeark(query_data)
+WordBeark(question_data)
