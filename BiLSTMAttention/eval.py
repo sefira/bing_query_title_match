@@ -121,6 +121,7 @@ with graph.as_default():
             print(x[i])
             print(eval_query[i])
             print(batch_attention_weight_x[0][0:real_len_x_value[0]])
+            #visualization(eval_query[i], batch_attention_weight_x[0], html_file)
             print(y[i])
             print(eval_question[i])
             print(batch_attention_weight_xpos[0][0:real_len_y_value[0]])

@@ -139,7 +139,10 @@ class BiLSTMAttention(object):
             weighted_rnn_output = tf.multiply(
                 inputs, tf.reshape(attention_weights, [-1, parameters["sequence_length"], 1]))
             attention_outputs = tf.reduce_sum(weighted_rnn_output, 1, name="attention_outputs")
-
+            ###################
+            # max pooling layer
+            #attention_outputs = tf.reduce_max(inputs, 1, name="attention_outputs")
+            ###################
             dropout_outputs = tf.nn.dropout(
                 attention_outputs, self.dropout_keep_prob, name="attention_outputs_{}".format(name))
         return dropout_outputs
