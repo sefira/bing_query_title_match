@@ -14,6 +14,7 @@ import csv
 
 # Data Parameters
 tf.flags.DEFINE_string("eval_data_file",        "../data/eval_data.txt", "Data source for the eval")
+tf.flags.DEFINE_string("result_html_file",      "../data/visualization.html", "Visualize Attention Weight")
 
 # Eval Parameters
 tf.flags.DEFINE_integer("batch_size",           1,                      "Batch Size (default: 64)")
@@ -42,6 +43,20 @@ y = word2vec_helpers.SentencesIndex(eval_question, max_document_length)
 ckpt = tf.train.get_checkpoint_state(os.path.join(FLAGS.checkpoint_dir, 'checkpoints'))
 if ckpt:
     print("Read model parameters from %s" % ckpt.model_checkpoint_path)
+
+def visualization(words, attentions, html_file):
+    i = 0
+    for word in words.split():
+        if word in word2vec_helpers.word2index:
+            html_file.write(
+                '<font style="background: rgba(255, 255, 0, {:f})">{}</font>\n'. \
+                format(attentions[i], word))
+            i = i + 1
+        else:
+            html_file.write(
+                '<font style="background: rgba(255, 255, 0, {:f})">{}</font>\n'. \
+                format(0, word))
+    html_file.write("<br>")
 
 # Evaluation
 # ==================================================
@@ -79,10 +94,12 @@ with graph.as_default():
         attention_weight_xpos = graph.get_operation_by_name("attention/attention_xpos/attention_weights").outputs[0]
         attention_weight_xneg = graph.get_operation_by_name("attention/attention_xneg/attention_weights").outputs[0]
         
-        # Collect the predictions here
+        # Collect the results here
         all_x_vs_xpos = []
         all_attention_weight_x = []
         all_attention_weight_xpos = []
+
+        html_file = open(FLAGS.result_html_file, "w")
         for i in range(len(x)):
             real_len_x_value = real_len_func([x[i]])
             real_len_y_value = real_len_func([y[i]])
@@ -107,3 +124,5 @@ with graph.as_default():
             print(y[i])
             print(eval_question[i])
             print(batch_attention_weight_xpos[0][0:real_len_y_value[0]])
+            visualization(eval_question[i], batch_attention_weight_xpos[0], html_file)
+
