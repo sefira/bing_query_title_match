@@ -35,7 +35,7 @@ flags.DEFINE_integer('attention_size',      600 ,       "Attention model size, d
 flags.DEFINE_float('dropout_keep_prob',     0.5,        "Dropout rate")
 flags.DEFINE_float('l2_reg_lambda',         0.0,        "l2 reg lambda")
 flags.DEFINE_bool('non_static',             True,       "Whether change word2vec")
-flags.DEFINE_bool('GRU',                    True,       "Whether use GRU")
+flags.DEFINE_bool('GRU',                    False,       "Whether use GRU")
 
 # Training parameters
 flags.DEFINE_integer("batch_size",          256,        "Batch Size (default: 64)")

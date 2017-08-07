@@ -123,20 +123,22 @@ class BiLSTMAttention(object):
 
         # Accuracy
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.greater(self.x_vs_xpos, self.x_vs_xneg)
+            correct_predictions = tf.greater(self.x_vs_xpos, self.x_vs_xneg, name="correct_predictions")
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
     def attention(self, inputs, parameters, name):
         with tf.name_scope("attention_{}".format(name)):
             att = tf.tanh(
-                tf.nn.xw_plus_b(tf.reshape(inputs, [-1, inputs.shape[2].value]), parameters["W"], parameters["b"]))
-            logits = tf.matmul(att, tf.reshape(parameters["u"], [-1, 1]))
+                tf.nn.xw_plus_b(tf.reshape(inputs, [-1, inputs.shape[2].value]), parameters["W"], parameters["b"]),
+                name="attention_projection")
+            logits = tf.matmul(att, tf.reshape(parameters["u"], [-1, 1]), name="attention_logits")
             attention_weights = tf.nn.softmax(
-                tf.reshape(logits, [-1, parameters["sequence_length"]]), dim=1)
-            
+                tf.reshape(logits, [-1, parameters["sequence_length"]]), dim=1,
+                name="attention_weights")
+
             weighted_rnn_output = tf.multiply(
                 inputs, tf.reshape(attention_weights, [-1, parameters["sequence_length"], 1]))
-            attention_outputs = tf.reduce_sum(weighted_rnn_output, 1)
+            attention_outputs = tf.reduce_sum(weighted_rnn_output, 1, name="attention_outputs")
 
             dropout_outputs = tf.nn.dropout(
                 attention_outputs, self.dropout_keep_prob, name="attention_outputs_{}".format(name))

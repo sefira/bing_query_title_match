@@ -15,23 +15,22 @@ def process_data(line):
     word break and remove word
     Returns split sentences
     """
+    query, question = line.split('\t')
     # Word break
-    seg_list = jieba.cut(line)
-    line = u' '.join(seg_list)
-    # Remove word
-    ss = re.findall('[\n\s*\r\u4e00-\u9fa5]|nmovie|nrcelebrity', line)
-    line = u"".join(ss).strip()
-
-    if(len(line) < 2):
-        return "UNK"
-    return line
+    query_list = jieba.cut(query)
+    question_list = jieba.cut(question)
+    output_query = u' '.join(query_list) + '\n'
+    output_question = u' '.join(question_list)
+    # if(len(line) < 2):
+    #     return "UNK"
+    return output_query, output_question
 
 def load_data(eval_data_file):
     eval_data = list(open(eval_data_file, "r").readlines())
-    row_data = [s.strip().split("\t") for s in eval_data]
-    X = [process_data(item[0]) for item in row_data]
-    Y = [int(item[1]) for item in row_data]
-    return [len(X), X, Y]
+    XY = [process_data(item) for item in eval_data]
+    X = [item[0] for item in XY]
+    Y = [item[1] for item in XY]
+    return [len(XY), X, Y]
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
@@ -40,6 +39,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
     data = np.array(data)
     data_size = len(data)
     num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:
@@ -47,6 +47,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             shuffled_data = data[shuffle_indices]
         else:
             shuffled_data = data
+
         for batch_num in range(num_batches_per_epoch):
             start_index = batch_num * batch_size
             end_index = min((batch_num + 1) * batch_size, data_size)
