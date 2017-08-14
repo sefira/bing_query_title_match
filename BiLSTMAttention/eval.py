@@ -49,12 +49,12 @@ def visualization(words, attentions, html_file):
     for word in words.split():
         if word in word2vec_helpers.word2index:
             html_file.write(
-                '<font style="background: rgba(255, 255, 0, {:f})">{}</font>\n'. \
+                '<font style="background: rgba(255, 0, 0, {:f})">{}</font>\n'. \
                 format(attentions[i], word))
             i = i + 1
         else:
             html_file.write(
-                '<font style="background: rgba(255, 255, 0, {:f})">{}</font>\n'. \
+                '<font style="background: rgba(255, 0, 0, {:f})">{}</font>\n'. \
                 format(0, word))
     html_file.write("<br>")
 
