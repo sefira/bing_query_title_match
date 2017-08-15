@@ -59,6 +59,7 @@ with graph.as_default():
         real_len_xpos = graph.get_operation_by_name("real_len_xpos").outputs[0]
         dropout_keep_prob = graph.get_operation_by_name("dropout_keep_prob").outputs[0]
         batch_size = graph.get_operation_by_name("batch_size").outputs[0]
+        attention_weight_x = graph.get_operation_by_name("attention/attention_x/attention_weights").outputs[0]
 
         def real_len_func(batchs):
             return [np.argmin(batch + [0]) for batch in batchs]
@@ -66,6 +67,8 @@ with graph.as_default():
         # tensor we want to evaluate
         x_vs_xpos = graph.get_operation_by_name("output/x_vs_xpos").outputs[0]
 
+#############################################################
+### evaluate model 
 def eval():
     # load data
     eval_size, eval_query, eval_question = eval_data_helpers.load_data(FLAGS.eval_data_file)
@@ -92,6 +95,45 @@ def eval():
     top1 = np.argmax(batch_x_vs_xpos)
     print(top1)
 
+#############################################################
+### Visualization
+def visualization(querys):
+    querys = querys.decode("utf-8")
+    querys = querys.split("\n")
+    querys = [process_line(item) for item in querys]
+    querys = querys + ["UNK"]
+    x = word2vec_helpers.SentencesIndex(querys, max_document_length)
+
+    real_len_x_value = real_len_func(x)
+    feed_dict = {
+        input_x: x,
+        real_len_x: real_len_x_value,
+        dropout_keep_prob: 1.0,
+        batch_size: len(x)
+    }
+    batch_attention_weight_x = sess.run([attention_weight_x], feed_dict)
+
+    querys.pop()
+    attention_html = '<meta http-equiv="content-type" content="text/html; charset=utf-8">\n<br>'
+    for words, attentions in zip(querys, batch_attention_weight_x[0]):
+        i = 0
+        for word in words.split():
+            if word in word2vec_helpers.word2index:
+                attention_html = attention_html + \
+                    '<font style="background: rgba(255, 0, 0, {:f})">{}</font>\n'.\
+                    format(attentions[i], word)
+                i = i + 1
+            else:
+                attention_html = attention_html + \
+                    '<font style="background: rgba(255, 0, 0, {:f})">{}</font>\n'.\
+                    format(0, word)
+        attention_html  = attention_html + "<br>"
+
+    return attention_html
+
+
+#############################################################
+### simliarty matching in query and top10 BingAPI retrieval 
 def process_line(line):
     # Word break
     line_list = jieba.cut(line)
@@ -122,6 +164,7 @@ def predict(query, questions):
     print(index)
     return batch_x_vs_xpos, index
 
+# retrieval answers using BingAPI
 def get_query_retrieval(query):
     url = "https://www.bing.com/api/v6/search?q=" + query + "%20site:zhidao.baidu.com&appid=371E7B2AF0F9B84EC491D731DF90A55719C7D209&mkt=zh-cn&responsefilter=webpages"
     questions = []
@@ -155,13 +198,21 @@ def get_full_answer(url):
             best = "没有查询到答案"
     return best
 
+#############################################################
+### web server
 web_server = Flask(__name__)
 
-@web_server.route('/')
+@web_server.route("/")
 def hello_world():
     return 'Hello World!'
 
-@web_server.route("/query")
+@web_server.route("/query", methods = ['POST'])
+def visualize():
+    query = request.data
+    html = visualization(query)
+    return html
+
+@web_server.route("/query", methods = ['GET'])
 def get_query():
     query = request.args.get('q')
     questions, answers, urls = get_query_retrieval(query)
