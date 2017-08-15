@@ -13,7 +13,7 @@ from flask import Flask
 from flask import request
 import requests
 import lxml.html
-import urllib
+import urllib.request
 
 # Parameter
 # =================================================
@@ -116,11 +116,11 @@ def predict(query, questions):
         dropout_keep_prob: 1.0,
         batch_size: FLAGS.batch_size,
     }
-    batch_x_vs_xpos = sess.run([x_vs_xpos], feed_dict)
+    batch_x_vs_xpos = sess.run([x_vs_xpos], feed_dict)[0]
     print(batch_x_vs_xpos)
-    top1 = np.argmax(batch_x_vs_xpos)
-    print(top1)
-    return batch_x_vs_xpos, top1
+    index = np.argsort(-batch_x_vs_xpos.reshape(10))
+    print(index)
+    return batch_x_vs_xpos, index
 
 def get_query_retrieval(query):
     url = "https://www.bing.com/api/v6/search?q=" + query + "%20site:zhidao.baidu.com&appid=371E7B2AF0F9B84EC491D731DF90A55719C7D209&mkt=zh-cn&responsefilter=webpages"
@@ -143,7 +143,7 @@ def get_query_retrieval(query):
 
 def get_full_answer(url):
     print(url)
-    page = lxml.html.document_fromstring(urllib.request.urlopen(url).read())
+    page = lxml.html.document_fromstring(urllib.request.urlopen(url).read().decode("gbk"))
     best = page.xpath("//pre[contains(@class, 'best-text mb-10')]")
     common = page.xpath("//meta[contains(@name, 'description')]")
     if len(best) >= 1:
@@ -167,10 +167,18 @@ def get_query():
     questions, answers, urls = get_query_retrieval(query)
     if len(questions) < 10:
         return "没有查询到答案"
-    batch_similarity, top1 = predict(query, questions)
-    reply = get_full_answer(urls[top1])
+    batch_similarity, index = predict(query, questions)
+    # reply = get_full_answer(urls[top1])
+    reply = ""
+    reply = reply + answers[index[0]] + "@@@" + urls[index[0]] + "\n"
+    reply = reply + answers[index[1]] + "@@@" + urls[index[1]] + "\n"
+    reply = reply + answers[index[2]] + "@@@" + urls[index[2]] + "\n"
+    reply = reply + answers[index[3]] + "@@@" + urls[index[3]] + "\n"
+    reply = reply + answers[index[4]] + "@@@" + urls[index[4]] + "\n"
     return reply
 
+# 电影推荐
+# 剖腹产多久可以出院
 if __name__ == "__main__":
     #eval()
     web_server.run(host='0.0.0.0', port=9006, debug=True)
